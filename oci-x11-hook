@@ -1,0 +1,34 @@
+#!/bin/bash
+
+state=$(cat)
+config=$(jq -r .bundle <<< "$state")/config.json
+
+# the DISPLAY env var is the precondition for this hook to run
+DISPLAY=$(jq -r '.process.env[] | select(startswith("DISPLAY=")) | sub("DISPLAY="; "")' < "$config")
+if [[ -z "$DISPLAY" ]]; then
+    exit 0
+fi
+
+exec 3>"$HOME/.local/oci-x11-hook.log"
+
+rootfs=$(jq -r .root.path < "$config")
+if [[ ! -d "$rootfs" ]]; then
+    echo "rootfs is not a directory" >&2
+    exit 1
+fi
+
+HOME=$(jq -r '.process.env[] | select(startswith("HOME=")) | sub("HOME="; "")' < "$config")
+if [[ -z "$HOME" ]]; then
+    echo "HOME is unset" >&2
+    exit 1
+fi
+
+XAUTH=$(jq -r '.process.env[] | select(startswith("XAUTH=")) | sub("XAUTH="; "")' < "$config")
+if [[ -z "$XAUTH" ]]; then
+    echo "XAUTH should be set to the .Xauthority file" >&2
+    exit 1
+fi
+
+cp "$XAUTH" "$rootfs/$HOME/.Xauthority"
+mkdir "$rootfs/tmp/.X11-unix"
+mount --bind /tmp/.X11-unix "$rootfs/tmp/.X11-unix"

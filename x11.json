@@ -1,0 +1,10 @@
+{
+  "version": "1.0.0",
+  "hook": {
+    "path": "/usr/local/bin/oci-x11-hook"
+  },
+  "when": {
+    "always": true
+  },
+  "stages": ["prestart"]
+}
